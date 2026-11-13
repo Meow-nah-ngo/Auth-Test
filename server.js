@@ -1,3 +1,4 @@
+const path = require('path');
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
@@ -7,9 +8,10 @@ const { requireAuth } = require('./middleware/authMiddleware');
 
 const app = express();
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
-  res.send('Auth API Server is running!');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.use(
@@ -29,7 +31,7 @@ app.use(
 let dummyUser = {
   id: 1,
   username: 'teacher',
-  email: 'user@example.com',
+  email: 'thitaree1811@gmail.com',
   passwordHash: '',
 };
 

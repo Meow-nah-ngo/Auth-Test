@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>2FA Auth System</title>
+  <style>
+    body { font-family: sans-serif; background: #f4f1ea; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+    input { width: 90%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+    button { width: 96%; padding: 10px; background: #8c6d53; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+    button:hover { background: #735740; }
+    .hidden { display: none; }
+    .msg { margin: 10px 0; font-size: 14px; color: #c81e1e; }
+    .msg.ok { color: #03543f; }
+    .box { background: #f9f7f4; padding: 15px; border-radius: 8px; text-align: left; margin-top: 15px; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div id="msg" class="msg"></div>
+
+  <!-- Step 1: Login -->
+  <div id="step1">
+    <h2>เข้าสู่ระบบ</h2>
+    <input type="text" id="username" value="teacher" placeholder="Username">
+    <input type="password" id="password" value="password123" placeholder="Password">
+    <button id="btnLogin" onclick="handleLogin()">เข้าสู่ระบบ</button>
+  </div>
+
+  <!-- Step 2: OTP -->
+  <div id="step2" class="hidden">
+    <h2>ยืนยัน OTP</h2>
+    <p style="font-size:13px; color:#666;">กรอกรหัส 6 หลักที่ส่งไปยังอีเมล</p>
+    <input type="text" id="otp" maxlength="6" placeholder="000000" style="text-align:center; letter-spacing:5px; font-size:20px;">
+    <button onclick="handleOtp()">ยืนยัน OTP</button>
+  </div>
+
+  <!-- Step 3: Success -->
+  <div id="step3" class="hidden">
+    <h2 style="color:#0e9f6e;">✓ ยืนยันตัวตนสำเร็จ!</h2>
+    <p style="font-size:13px; color:#666;">สร้าง Session และ HttpOnly Cookie แล้ว</p>
+    <div id="profile" class="box">กำลังโหลดข้อมูล...</div>
+    <button onclick="location.reload()" style="background:#777;">ออกจากระบบ</button>
+  </div>
+</div>
+
+<script>
+  function showMsg(text, isOk) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = isOk ? 'msg ok' : 'msg';
+  }
+
+  async function handleLogin() {
+    const btn = document.getElementById('btnLogin');
+    btn.disabled = true;
+    btn.textContent = 'กำลังส่ง OTP...';
+    showMsg('', false);
+
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('username').value,
+          password: document.getElementById('password').value
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('step1').classList.add('hidden');
+        document.getElementById('step2').classList.remove('hidden');
+        showMsg(data.message, true);
+      } else {
+        showMsg(data.message, false);
+      }
+    } catch (e) {
+      showMsg('เชื่อมต่อ Server ไม่ได้', false);
+    }
+    btn.disabled = false;
+    btn.textContent = 'เข้าสู่ระบบ';
+  }
+
+  async function handleOtp() {
+    try {
+      const res = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otp: document.getElementById('otp').value })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('step2').classList.add('hidden');
+        document.getElementById('step3').classList.remove('hidden');
+        showMsg('', true);
+        loadProfile();
+      } else {
+        showMsg(data.message, false);
+      }
+    } catch (e) {
+      showMsg('ตรวจสอบ OTP ไม่สำเร็จ', false);
+    }
+  }
+
+  async function loadProfile() {
+    const res = await fetch('/api/profile');
+    const data = await res.json();
+    document.getElementById('profile').innerHTML = res.ok
+      ? `<b>สถานะ:</b> ${data.message}<br><b>ID:</b> ${data.user.id}<br><b>User:</b> ${data.user.username}`
+      : data.message;
+  }
+</script>
+
+</body>
+</html>
